@@ -88,6 +88,12 @@ namespace ClaudeCodeVS
                     Arguments = "--list-models",
                     Parse = ModelCatalogParsers.ParsePiModelList
                 },
+                [AiProvider.Omp] = new ModelCatalogSource
+                {
+                    DefaultCommand = "omp",
+                    Arguments = "models --json",
+                    Parse = ModelCatalogParsers.ParseOmpCatalog
+                },
                 [AiProvider.Antigravity] = new ModelCatalogSource
                 {
                     DefaultCommand = "agy",
@@ -519,6 +525,7 @@ namespace ClaudeCodeVS
                 case AiProvider.CursorAgent:
                 case AiProvider.CursorAgentNative:
                 case AiProvider.Pi:
+                case AiProvider.Omp:
                 case AiProvider.Antigravity:
                 case AiProvider.Devin:
                 case AiProvider.DevinNative:

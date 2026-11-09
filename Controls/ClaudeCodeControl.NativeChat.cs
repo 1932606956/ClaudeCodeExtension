@@ -3839,6 +3839,10 @@ namespace ClaudeCodeVS
                     executable = ResolveNativeProviderExecutable(provider, "pi");
                     break;
 
+                case AiProvider.Omp:
+                    executable = ResolveNativeProviderExecutable(provider, "omp");
+                    break;
+
                 case AiProvider.Antigravity:
                     executable = ResolveNativeProviderExecutable(provider, "agy");
                     break;
@@ -7034,6 +7038,8 @@ namespace ClaudeCodeVS
                     return "wsl bash -lic \"devin update\"";
                 case AiProvider.Pi:
                     return "npm install -g @earendil-works/pi-coding-agent@latest";
+                case AiProvider.Omp:
+                    return "bun install -g @oh-my-pi/pi-coding-agent@latest";
                 case AiProvider.Antigravity:
                     return "agy update";
                 case AiProvider.Reasonix:

@@ -80,6 +80,12 @@ namespace ClaudeCodeVS.Agents
         /// <summary>Fresh rate-limit/quota data reported by the CLI mid-stream.</summary>
         RateLimitUpdated,
 
+        /// <summary>
+        /// The CLI published its current slash-command list (OMP's <c>available_commands_update</c>).
+        /// Carries the names and descriptions the picker should offer.
+        /// </summary>
+        SlashCommandsUpdated,
+
         /// <summary>The session failed. Carries a human-readable message.</summary>
         SessionError
     }
@@ -401,6 +407,16 @@ namespace ClaudeCodeVS.Agents
     /// adapters stay allocation-cheap and the UI can switch on <see cref="Kind"/>; fields not
     /// relevant to a given kind are left at their defaults.
     /// </summary>
+    /// <summary>
+    /// One slash command announced by a CLI over its native protocol. OMP sends these in an
+    /// <c>available_commands_update</c> frame, including the descriptions its own TUI would show.
+    /// </summary>
+    public class AgentSlashCommand
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+    }
+
     public class AgentEvent
     {
         public AgentEventKind Kind { get; set; }
@@ -413,6 +429,9 @@ namespace ClaudeCodeVS.Agents
         public string Model { get; set; } = string.Empty;
         public IReadOnlyList<string> Tools { get; set; }
         public IReadOnlyList<string> SlashCommands { get; set; }
+
+        // --- SlashCommandsUpdated ---
+        public IReadOnlyList<AgentSlashCommand> SlashCommandEntries { get; set; }
 
         // --- Tool calls ---
         public string ToolCallId { get; set; } = string.Empty;
@@ -545,6 +564,18 @@ namespace ClaudeCodeVS.Agents
         public static AgentEvent InteractionRequested(AgentInteractionRequest interaction)
         {
             return new AgentEvent { Kind = AgentEventKind.InteractionRequested, Interaction = interaction };
+        }
+
+        public static AgentEvent SlashCommandsUpdated(IReadOnlyList<AgentSlashCommand> commands)
+        {
+            return new AgentEvent
+            {
+                Kind = AgentEventKind.SlashCommandsUpdated,
+                SlashCommandEntries = commands,
+                SlashCommands = commands == null
+                    ? null
+                    : new List<string>(System.Linq.Enumerable.Select(commands, c => c.Name))
+            };
         }
 
         public static AgentEvent SessionError(string message)

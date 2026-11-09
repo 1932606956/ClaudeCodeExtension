@@ -489,6 +489,9 @@ namespace ClaudeCodeVS
                         case AiProvider.Pi:
                             providerAvailable = await IsPiAvailableAsync();
                             break;
+                        case AiProvider.Omp:
+                            providerAvailable = await IsOmpAvailableAsync();
+                            break;
                         case AiProvider.Antigravity:
                             providerAvailable = await IsAntigravityAvailableAsync();
                             break;
@@ -588,6 +591,13 @@ namespace ClaudeCodeVS
                                 {
                                     _piNotificationShown = true;
                                     ShowPiInstallationInstructions();
+                                }
+                                break;
+                            case AiProvider.Omp:
+                                if (!_ompNotificationShown)
+                                {
+                                    _ompNotificationShown = true;
+                                    ShowOmpInstallationInstructions();
                                 }
                                 break;
                             case AiProvider.Antigravity:

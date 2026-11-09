@@ -317,6 +317,7 @@ namespace ClaudeCodeVS
                 bool useOpenCode = _settings?.SelectedProvider == AiProvider.OpenCode;
                 bool useDevin = _settings?.SelectedProvider == AiProvider.Devin;
                 bool usePi = _settings?.SelectedProvider == AiProvider.Pi;
+                bool useOmp = _settings?.SelectedProvider == AiProvider.Omp;
                 bool useAntigravity = _settings?.SelectedProvider == AiProvider.Antigravity;
                 bool useReasonix = _settings?.SelectedProvider == AiProvider.Reasonix;
                 bool useQwenCode = _settings?.SelectedProvider == AiProvider.QwenCode;
@@ -364,6 +365,10 @@ namespace ClaudeCodeVS
                 else if (usePi)
                 {
                     providerAvailable = await IsPiAvailableAsync();
+                }
+                else if (useOmp)
+                {
+                    providerAvailable = await IsOmpAvailableAsync();
                 }
                 else if (useAntigravity)
                 {
@@ -559,6 +564,22 @@ namespace ClaudeCodeVS
                         {
                             _piNotificationShown = true;
                             ShowPiInstallationInstructions();
+                        }
+                        await StartEmbeddedTerminalAsync(null); // Regular CMD
+                    }
+                }
+                else if (useOmp)
+                {
+                    if (providerAvailable)
+                    {
+                        await StartEmbeddedTerminalAsync(AiProvider.Omp);
+                    }
+                    else
+                    {
+                        if (!_ompNotificationShown)
+                        {
+                            _ompNotificationShown = true;
+                            ShowOmpInstallationInstructions();
                         }
                         await StartEmbeddedTerminalAsync(null); // Regular CMD
                     }
@@ -1278,6 +1299,11 @@ namespace ClaudeCodeVS
                             cmdCommand = $"/k chcp 65001 >nul && cd /d \"{workspaceDir}\" && ping localhost -n 3 >nul && cls && {piCommand}";
                             break;
 
+                        case AiProvider.Omp:
+                            string ompCommand = GetOmpCommand();
+                            cmdCommand = $"/k chcp 65001 >nul && cd /d \"{workspaceDir}\" && ping localhost -n 3 >nul && cls && {ompCommand}";
+                            break;
+
                         case AiProvider.Antigravity:
                             string antigravityCommand = GetAntigravityCommand();
                             cmdCommand = $"/k chcp 65001 >nul && cd /d \"{workspaceDir}\" && ping localhost -n 3 >nul && cls && {antigravityCommand}";
@@ -1574,6 +1600,11 @@ namespace ClaudeCodeVS
                         case AiProvider.Pi:
                             string piTerminalCommand = GetPiCommand();
                             terminalCommand = $"/k chcp 65001 >nul && cd /d \"{workspaceDir}\" && ping localhost -n 3 >nul && cls && {piTerminalCommand}";
+                            break;
+
+                        case AiProvider.Omp:
+                            string ompTerminalCommand = GetOmpCommand();
+                            terminalCommand = $"/k chcp 65001 >nul && cd /d \"{workspaceDir}\" && ping localhost -n 3 >nul && cls && {ompTerminalCommand}";
                             break;
 
                         case AiProvider.Antigravity:
@@ -5422,6 +5453,13 @@ namespace ClaudeCodeVS
                         await SendTextToTerminalAsync("npm install -g @earendil-works/pi-coding-agent@latest");
                         break;
 
+                    case AiProvider.Omp:
+                        // OMP (oh-my-pi): its TUI also exits with /quit.
+                        await SendTextToTerminalAsync("/quit");
+                        await Task.Delay(1000);
+                        await SendTextToTerminalAsync("bun install -g @oh-my-pi/pi-coding-agent@latest");
+                        break;
+
                     case AiProvider.Antigravity:
                         // Antigravity: exit with the /quit slash command, wait, then update
                         await SendTextToTerminalAsync("/quit");
@@ -5659,6 +5697,10 @@ namespace ClaudeCodeVS
 
                 case AiProvider.Pi:
                     providerAvailable = await IsPiAvailableAsync();
+                    break;
+
+                case AiProvider.Omp:
+                    providerAvailable = await IsOmpAvailableAsync();
                     break;
 
                 case AiProvider.Antigravity:
@@ -6261,6 +6303,16 @@ namespace ClaudeCodeVS
             return AppendExtraLaunchArgs(
                 ResolveProviderExecutable(AiProvider.Pi, "pi") + GetModelLaunchFlag(AiProvider.Pi),
                 AiProvider.Pi);
+        }
+
+        /// <summary>
+        /// Gets the OMP (oh-my-pi) command, carrying the selected model as --model.
+        /// </summary>
+        private string GetOmpCommand()
+        {
+            return AppendExtraLaunchArgs(
+                ResolveProviderExecutable(AiProvider.Omp, "omp") + GetModelLaunchFlag(AiProvider.Omp),
+                AiProvider.Omp);
         }
 
         /// <summary>

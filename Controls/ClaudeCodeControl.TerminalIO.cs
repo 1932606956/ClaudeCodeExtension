@@ -244,7 +244,7 @@ namespace ClaudeCodeVS
                     // TUI-based Node.js providers need extra time to initialize
                     // their interface after receiving focus, otherwise the paste may arrive
                     // before the TUI is ready to accept input.
-                    if (_currentRunningProvider == AiProvider.Pi)
+                    if (IsPiFamilyProvider(_currentRunningProvider))
                     {
                         await Task.Delay(400);
                     }
@@ -266,7 +266,7 @@ namespace ClaudeCodeVS
                     // to clear and a right-click would just open the context menu prematurely.
                     bool isCommandPrompt = _wtTabBarHeight == 0
                                            && _currentRunningProvider != AiProvider.OpenCode
-                                           && _currentRunningProvider != AiProvider.Pi
+                                           && !IsPiFamilyProvider(_currentRunningProvider)
                                            && _currentRunningProvider != AiProvider.Antigravity
                                            && !conhostMouseInputMode;
                     if (isCommandPrompt)
@@ -433,7 +433,7 @@ namespace ClaudeCodeVS
                 // TUI-based Node.js providers need extra time to initialize their interface
                 // after receiving focus, otherwise the first keystrokes may arrive too early.
                 bool isDevinFamilyKeystrokes = _currentRunningProvider == AiProvider.Devin || _currentRunningProvider == AiProvider.DevinNative;
-                if (_currentRunningProvider == AiProvider.Pi || isDevinFamilyKeystrokes)
+                if (IsPiFamilyProvider(_currentRunningProvider) || isDevinFamilyKeystrokes)
                 {
                     await Task.Delay(400);
                 }
@@ -1065,7 +1065,7 @@ namespace ClaudeCodeVS
                 bool isDevinNative = _currentRunningProvider == AiProvider.DevinNative;
 
                 bool isOpenCode = _currentRunningProvider == AiProvider.OpenCode;
-                bool isPi = _currentRunningProvider == AiProvider.Pi;
+                bool isPi = IsPiFamilyProvider(_currentRunningProvider);
                 bool isReasonix = _currentRunningProvider == AiProvider.Reasonix;
                 bool isGrok = _currentRunningProvider == AiProvider.Grok;
 

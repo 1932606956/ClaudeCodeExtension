@@ -367,8 +367,10 @@ namespace ClaudeCodeVS
                 case AiProvider.CodexNative:
                 case AiProvider.CursorAgent:
                 case AiProvider.CursorAgentNative:
-                // PI speaks a protocol of its own over a persistent process.
+                // PI speaks a protocol of its own over a persistent process; OMP (oh-my-pi)
+                // implements the same RPC protocol.
                 case AiProvider.Pi:
+                case AiProvider.Omp:
                 // Antigravity has no event stream at all — the answer arrives in one piece.
                 case AiProvider.Antigravity:
                     return true;
@@ -777,7 +779,8 @@ namespace ClaudeCodeVS
                     return CreateOneShotSession(provider, workspace, session, resumeSessionId);
 
                 case AiProvider.Pi:
-                    return CreatePiSession(session);
+                case AiProvider.Omp:
+                    return CreatePiSession(provider, session);
 
                 case AiProvider.Antigravity:
                     return CreatePrintModeSession(session);
@@ -1077,20 +1080,21 @@ namespace ClaudeCodeVS
         }
 
         /// <summary>
-        /// Builds the PI adapter. PI keeps one process alive like the ACP agents, but over a protocol
-        /// of its own.
+        /// Builds the PI-family adapter. PI and OMP (oh-my-pi) keep one process alive and speak the
+        /// same RPC protocol; only the executable and display name differ.
         /// </summary>
-        private IAgentSession CreatePiSession(NativeChatSessionState session = null)
+        private IAgentSession CreatePiSession(AiProvider provider, NativeChatSessionState session = null)
         {
             string freshPath = GetFreshPathFromRegistry();
+            string defaultCommand = provider == AiProvider.Omp ? "omp" : "pi";
 
             var options = new PiSessionOptions
             {
                 ExecutablePath = ResolveExecutableOnPath(
-                    ResolveNativeProviderExecutable(AiProvider.Pi, "pi"), freshPath),
-                Model = session != null ? session.SelectedModel : GetSelectedProviderModelId(AiProvider.Pi),
-                DisplayName = GetProviderDisplayName(AiProvider.Pi),
-                ExtraArguments = GetExtraLaunchArgs(AiProvider.Pi)
+                    ResolveNativeProviderExecutable(provider, defaultCommand), freshPath),
+                Model = session != null ? session.SelectedModel : GetSelectedProviderModelId(provider),
+                DisplayName = GetProviderDisplayName(provider),
+                ExtraArguments = GetExtraLaunchArgs(provider)
             };
 
             if (!string.IsNullOrWhiteSpace(freshPath))
@@ -2469,6 +2473,10 @@ namespace ClaudeCodeVS
             // Process based on event kind
             switch (agentEvent.Kind)
             {
+                case AgentEventKind.SlashCommandsUpdated:
+                    RememberOmpSlashCommands(agentEvent.SlashCommandEntries);
+                    break;
+
                 case AgentEventKind.SessionStarted:
                     RememberAnnouncedSlashCommands(agentEvent.SlashCommands);
                     // Every tab refreshes its own caption/label: the saved title only becomes known once
@@ -2556,6 +2564,10 @@ namespace ClaudeCodeVS
 
             switch (agentEvent.Kind)
             {
+                case AgentEventKind.SlashCommandsUpdated:
+                    RememberOmpSlashCommands(agentEvent.SlashCommandEntries);
+                    break;
+
                 case AgentEventKind.SessionStarted:
                     RememberAnnouncedSlashCommands(agentEvent.SlashCommands);
                     // Re-announced at the start of every turn — never treat it as a new conversation.

@@ -319,6 +319,7 @@ Enums (`AiProvider`, `ClaudeModel`, `EffortLevel`, `CodexReasoningLevel`, `Theme
 | Devin (WSL) | `Devin` | WSL | `devin` | `exit` |
 | Devin (native) | `DevinNative` | Windows | `devin` | `exit` |
 | PI | `Pi` | Windows | `pi` | CTRL+D twice |
+| OMP | `Omp` | Windows | `omp` | `/quit` |
 | Antigravity | `Antigravity` | Windows | `agy` | Double CTRL+D |
 | Reasonix | `Reasonix` | Windows | `reasonix` | CTRL+C |
 | Qwen Code | `QwenCode` | Windows | `qwen` | `/quit` |

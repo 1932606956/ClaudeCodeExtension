@@ -333,6 +333,37 @@ namespace ClaudeCodeVS.Agents
                     Raise(AgentEvent.SessionError(
                         $"Retrying ({message["attempt"]}/{message["maxAttempts"]}): {message["errorMessage"]}"));
                     break;
+
+                case "available_commands_update":
+                    HandleAvailableCommands(message["commands"] as JArray);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// OMP publishes its slash-command list (built-ins, extension commands and skills) as a
+        /// <c>commands</c> array. PI does not send this frame; the handler is harmless there.
+        /// </summary>
+        private void HandleAvailableCommands(JArray commands)
+        {
+            if (commands == null) return;
+
+            var entries = new List<AgentSlashCommand>();
+            foreach (JToken command in commands)
+            {
+                string name = command?["name"]?.ToString();
+                if (string.IsNullOrWhiteSpace(name)) continue;
+
+                entries.Add(new AgentSlashCommand
+                {
+                    Name = name,
+                    Description = command["description"]?.ToString() ?? string.Empty
+                });
+            }
+
+            if (entries.Count > 0)
+            {
+                Raise(AgentEvent.SlashCommandsUpdated(entries));
             }
         }
 

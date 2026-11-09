@@ -99,6 +99,7 @@ By default only **Claude Code** is shown in the agent picker — use *⚙ → Co
 | Open Code | Windows | `opencode` | Node.js 14+; provider configured via `Ctrl+P` → "connect providers" |
 | Devin | Windows / WSL | `devin` | Devin account. Optional `--permission-mode dangerous` toggle. Native install from Windows Terminal: `irm https://static.devin.ai/cli/setup.ps1 \| iex` |
 | PI | Windows | `pi` | Node.js + Git for Windows |
+| OMP | Windows | `omp` | oh-my-pi; install with `bun install -g @oh-my-pi/pi-coding-agent` |
 | Google Antigravity | Windows | `agy` | Google account. Optional `--dangerously-skip-permissions` toggle |
 | Reasonix | Windows | `reasonix` | DeepSeek API key (`DEEPSEEK_API_KEY`). Install with `npm i -g reasonix` |
 | Qwen Code | Windows | `qwen` | Node.js 22+; Coding Plan or API key via `/auth`. Optional `--yolo` toggle |
@@ -197,6 +198,12 @@ A huge thank you to every developer who took the time to improve this extension 
 - [@wluisdev](https://github.com/wluisdev) — 1 PR
 
 ## Version History
+
+### Version 308.0
+- OMP's slash commands now appear in the "/" picker with the descriptions OMP publishes, including its skills.
+
+### Version 307.0
+- Added OMP (oh-my-pi) as a supported agent, with native chat, model selection, CLI path detection and terminal fallback.
 
 ### Version 306.0
 - The licensing contact line now points to GitHub issues instead of an email address.

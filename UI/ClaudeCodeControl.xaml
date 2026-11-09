@@ -607,6 +607,7 @@
 									<MenuItem Header="Devin" x:Name="DevinNativeMenuItem" Click="DevinNativeMenuItem_Click" IsCheckable="True"/>
 									<MenuItem Header="Devin (WSL)" x:Name="DevinMenuItem" Click="DevinMenuItem_Click" IsCheckable="True"/>
 									<MenuItem Header="PI" x:Name="PiMenuItem" Click="PiMenuItem_Click" IsCheckable="True"/>
+									<MenuItem Header="OMP" x:Name="OmpMenuItem" Click="OmpMenuItem_Click" IsCheckable="True"/>
 									<MenuItem Header="Antigravity" x:Name="AntigravityMenuItem" Click="AntigravityMenuItem_Click" IsCheckable="True"/>
 									<MenuItem Header="Reasonix" x:Name="ReasonixMenuItem" Click="ReasonixMenuItem_Click" IsCheckable="True"/>
 									<MenuItem Header="Qwen Code" x:Name="QwenCodeMenuItem" Click="QwenCodeMenuItem_Click" IsCheckable="True"/>

@@ -39,6 +39,7 @@ namespace ClaudeCodeVS
             (AiProvider.DevinNative,       "Devin",              false),
             (AiProvider.Devin,             "Devin (WSL)",        true),
             (AiProvider.Pi,                "PI",                 false),
+            (AiProvider.Omp,               "OMP",                false),
             (AiProvider.Antigravity,       "Antigravity",        false),
             (AiProvider.Reasonix,          "Reasonix",           false),
             (AiProvider.QwenCode,          "Qwen Code",          false),

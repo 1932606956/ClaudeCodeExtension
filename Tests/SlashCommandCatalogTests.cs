@@ -62,6 +62,15 @@ namespace ClaudeCodeExtension.Tests
         }
 
         [TestMethod]
+        public void TryGetQuery_AllowsOmpSkillNamesWithSlashes()
+        {
+            const string text = "/skill:agents/archify";
+
+            Assert.IsTrue(SlashCommandCatalog.TryGetQuery(text, text.Length, allowSlashes: true, out string q));
+            Assert.AreEqual("skill:agents/archify", q);
+        }
+
+        [TestMethod]
         public void ParseMarkdown_ReadsQuotedAndBlockDescriptions()
         {
             var quoted = SlashCommandCatalog.ParseMarkdown(

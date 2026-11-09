@@ -542,7 +542,7 @@ Re-parents terminal to/from `DetachedTerminalToolWindow` via `SetParent()`. Auto
 
 ## "/" Command Picker (SlashCommands.cs, Agents/SlashCommandCatalog.cs, #187, v228.0)
 
-- Why: the Claude TUI lists commands and skills with descriptions as soon as `/` is typed; the native composer has no TUI, so the list is rebuilt. Claude providers only (`IsClaudeProvider(GetActiveOrSelectedProvider())`) — other CLIs' commands are not discovered, and the picker stays closed for them
+- Why: the Claude TUI lists commands and skills with descriptions as soon as `/` is typed; the native composer has no TUI, so the list is rebuilt. Claude providers discover commands from disk (`.claude/commands`, `.claude/skills`); OMP publishes its full list over RPC in `available_commands_update`, which `PiRpcSession` forwards as `AgentEventKind.SlashCommandsUpdated` and `RememberOmpSlashCommands` caches. The picker is open for Claude and OMP only; other CLIs' commands are not discovered.
 - Shared popup: reuses the "@" picker's `AtMentionTarget` popup/ListBox via `AtMentionTarget.SlashMode`. `UpdateAtMentionPopup` calls `TryUpdateSlashPopup` first; rows are `SlashCommandEntry` objects (rendered with `ToString`) instead of strings. Any code that reads `ListBox.SelectedItem` must branch on `SlashMode` (key handler, row click)
 - Trigger (`SlashCommandCatalog.TryGetQuery`): text starts with `/` and the caret is still inside that first token (no whitespace or second `/`). `/path/to` and `/cmd args` do not open it
 - PageUp/PageDown jump `AtPopupPageSize` rows in either picker (`HandleAtMentionKey`); Up/Down still move one

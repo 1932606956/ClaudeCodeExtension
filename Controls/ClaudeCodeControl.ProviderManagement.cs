@@ -76,6 +76,11 @@ namespace ClaudeCodeVS
         private static bool _piNotificationShown = false;
 
         /// <summary>
+        /// Flag to show OMP installation notification only once per session
+        /// </summary>
+        private static bool _ompNotificationShown = false;
+
+        /// <summary>
         /// Flag to show Antigravity installation notification only once per session
         /// </summary>
         private static bool _antigravityNotificationShown = false;
@@ -1142,6 +1147,81 @@ namespace ClaudeCodeVS
         }
 
         /// <summary>
+        /// Checks if OMP CLI is available (oh-my-pi installation)
+        /// Uses 'where omp' to check if pi is in PATH
+        /// Uses caching to avoid repeated slow checks
+        /// </summary>
+        /// <param name="cancellationToken">Optional cancellation token</param>
+        /// <returns>True if pi is available, false otherwise</returns>
+        private async Task<bool> IsOmpAvailableAsync(CancellationToken cancellationToken = default)
+        {
+            // A configured custom CLI path means the tool is usable even when it is not on PATH.
+            if (CustomExecutableConfigured(AiProvider.Omp, isWsl: false))
+            {
+                return true;
+            }
+
+            // Check cache first
+            lock (_cacheLock)
+            {
+                if (_providerCache.TryGetValue(AiProvider.Omp, out var cached) && IsCacheValid(cached))
+                {
+                    return cached.IsAvailable;
+                }
+            }
+
+            try
+            {
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = "/c where omp",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                // Refresh PATH from registry so a freshly installed omp is detected without VS restart
+                string freshPath = GetFreshPathFromRegistry();
+                if (!string.IsNullOrEmpty(freshPath))
+                {
+                    startInfo.EnvironmentVariables["PATH"] = freshPath;
+                }
+
+                using (var process = Process.Start(startInfo))
+                {
+                    var completed = await WaitForProcessExitAsync(process, 3000, cancellationToken);
+
+                    if (!completed)
+                    {
+                        try { process.Kill(); } catch { }
+                        CacheProviderResult(AiProvider.Omp, false);
+                        return false;
+                    }
+
+                    string output = await process.StandardOutput.ReadToEndAsync();
+                    string error = await process.StandardError.ReadToEndAsync();
+
+                    bool isAvailable = process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output);
+
+                    CacheProviderResult(AiProvider.Omp, isAvailable);
+                    return isAvailable;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error checking for OMP: {ex.Message}");
+                CacheProviderResult(AiProvider.Omp, false);
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Checks if Antigravity CLI is available (native Windows installation under %LocalAppData%\agy)
         /// Uses 'where agy' to check if agy is in PATH
         /// Uses caching to avoid repeated slow checks
@@ -1799,6 +1879,23 @@ namespace ClaudeCodeVS
                           MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
+        /// <summary>
+        /// Shows installation instructions for OMP CLI (oh-my-pi)
+        /// </summary>
+        private void ShowOmpInstallationInstructions()
+        {
+            string instructions = L("OMP is not installed. A regular CMD terminal will be used instead.\r\n\r\n" +
+                  "INSTALLATION: Bun or NPM\r\n\r\n" +
+                  "Open cmd and run:\r\n\r\n" +
+                  "bun install -g @oh-my-pi/pi-coding-agent\r\n\r\n" +
+                  "or:\r\n\r\n" +
+                  "npm install -g @oh-my-pi/pi-coding-agent\r\n\r\n" +
+                  "For more details, visit: https://omp.sh");
+
+            MessageBox.Show(instructions, L("OMP Installation"),
+                          MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
         private void ShowAntigravityInstallationInstructions()
         {
             // Expand %LocalAppData%\agy to the actual path so the user can copy it
@@ -2019,6 +2116,37 @@ namespace ClaudeCodeVS
                 if (!await TryStartNativeModeAsync())
                 {
                     await StartEmbeddedTerminalAsync(AiProvider.Pi);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Handles OMP menu item click - switches to OMP provider
+        /// </summary>
+#pragma warning disable VSTHRD100 // async void is acceptable for event handlers
+        private async void OmpMenuItem_Click(object sender, RoutedEventArgs e)
+#pragma warning restore VSTHRD100
+        {
+            if (_settings == null) return;
+
+            bool ompAvailable = await IsOmpAvailableAsync();
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            // Always update the selection regardless of availability
+            _settings.SelectedProvider = AiProvider.Omp;
+            UpdateProviderSelection();
+            SaveSettings();
+
+            if (!ompAvailable)
+            {
+                ShowOmpInstallationInstructions();
+                await StartEmbeddedTerminalAsync(null); // Regular CMD
+            }
+            else
+            {
+                if (!await TryStartNativeModeAsync())
+                {
+                    await StartEmbeddedTerminalAsync(AiProvider.Omp);
                 }
             }
         }
@@ -2392,6 +2520,7 @@ namespace ClaudeCodeVS
             OpenCodeMenuItem.IsChecked = activeProvider == AiProvider.OpenCode;
             DevinMenuItem.IsChecked = activeProvider == AiProvider.Devin;
             PiMenuItem.IsChecked = activeProvider == AiProvider.Pi;
+            OmpMenuItem.IsChecked = activeProvider == AiProvider.Omp;
             AntigravityMenuItem.IsChecked = activeProvider == AiProvider.Antigravity;
             ReasonixMenuItem.IsChecked = activeProvider == AiProvider.Reasonix;
             QwenCodeMenuItem.IsChecked = activeProvider == AiProvider.QwenCode;
@@ -3027,6 +3156,14 @@ namespace ClaudeCodeVS
         }
 
         /// <summary>
+        /// PI and OMP (oh-my-pi) share the same RPC protocol and TUI behavior; OMP is a PI fork.
+        /// </summary>
+        private static bool IsPiFamilyProvider(AiProvider? provider)
+        {
+            return provider == AiProvider.Pi || provider == AiProvider.Omp;
+        }
+
+        /// <summary>
         /// Gets the provider name without model detail for compact labels inside the control.
         /// </summary>
         private string GetProviderDisplayName(AiProvider? provider)
@@ -3050,6 +3187,8 @@ namespace ClaudeCodeVS
                     return "Devin";
                 case AiProvider.Pi:
                     return "PI";
+                case AiProvider.Omp:
+                    return "OMP";
                 case AiProvider.Antigravity:
                     return "Antigravity";
                 case AiProvider.Reasonix:
@@ -3494,6 +3633,7 @@ namespace ClaudeCodeVS
                 case AiProvider.CursorAgent:
                 case AiProvider.CursorAgentNative:
                 case AiProvider.Pi:
+                case AiProvider.Omp:
                 case AiProvider.Antigravity:
                 case AiProvider.Reasonix:
                 case AiProvider.QwenCode:
@@ -4557,7 +4697,7 @@ namespace ClaudeCodeVS
             bool isCodexProvider = IsCodexProvider(activeProvider);
             bool isCursorAgentProvider = IsCursorAgentProvider(activeProvider);
             bool isDevinProvider = activeProvider == AiProvider.Devin;
-            bool isPiProvider = activeProvider == AiProvider.Pi;
+            bool isPiProvider = activeProvider == AiProvider.Pi || activeProvider == AiProvider.Omp;
             bool isAntigravityProvider = activeProvider == AiProvider.Antigravity;
             bool isReasonixProvider = activeProvider == AiProvider.Reasonix;
             bool isQwenCodeProvider = activeProvider == AiProvider.QwenCode;
@@ -5214,6 +5354,7 @@ namespace ClaudeCodeVS
                     { AiProvider.DevinNative,        DevinNativeMenuItem },
                     { AiProvider.Devin,           DevinMenuItem },
                     { AiProvider.Pi,                 PiMenuItem },
+                    { AiProvider.Omp,                OmpMenuItem },
                     { AiProvider.Antigravity,        AntigravityMenuItem },
                     { AiProvider.Reasonix,           ReasonixMenuItem },
                     { AiProvider.QwenCode,           QwenCodeMenuItem },
@@ -5239,6 +5380,7 @@ namespace ClaudeCodeVS
                 case AiProvider.OpenCode:          return "Open Code";
                 case AiProvider.Devin:          return "Devin (WSL)";
                 case AiProvider.Pi:                return "PI";
+                case AiProvider.Omp:               return "OMP";
                 case AiProvider.Antigravity:       return "Antigravity";
                 case AiProvider.Reasonix:          return "Reasonix";
                 case AiProvider.QwenCode:          return "Qwen Code";
@@ -5384,6 +5526,7 @@ namespace ClaudeCodeVS
                 AiProvider.DevinNative,
                 AiProvider.Devin,
                 AiProvider.Pi,
+                AiProvider.Omp,
                 AiProvider.Antigravity,
                 AiProvider.Reasonix,
                 AiProvider.QwenCode,

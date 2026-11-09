@@ -152,6 +152,38 @@ namespace ClaudeCodeExtension.Tests
 
         #endregion
 
+        #region OMP
+
+        [TestMethod]
+        public void ParseOmpCatalog_UsesTheProviderQualifiedSelectorAndTheDisplayName()
+        {
+            const string json = "{\"models\":[" +
+                "{\"provider\":\"hy-api\",\"id\":\"deepseek-v4.1-flash\",\"selector\":\"hy-api/deepseek-v4.1-flash\",\"name\":\"DeepSeek V4.1 Flash\"}," +
+                "{\"provider\":\"openai\",\"id\":\"gpt-6-luna\",\"selector\":\"openai/gpt-6-luna\",\"name\":\"GPT-6 Luna\"}]}";
+
+            List<ModelOption> models = ModelCatalogParsers.ParseOmpCatalog(json);
+
+            CollectionAssert.AreEqual(
+                new[] { "hy-api/deepseek-v4.1-flash", "openai/gpt-6-luna" },
+                models.Select(m => m.Id).ToArray());
+            CollectionAssert.AreEqual(
+                new[] { "DeepSeek V4.1 Flash", "GPT-6 Luna" },
+                models.Select(m => m.DisplayName).ToArray());
+        }
+
+        [TestMethod]
+        public void ParseOmpCatalog_FallsBackToTheBareIdWhenNoSelectorIsPresent()
+        {
+            const string json = "{\"models\":[{\"provider\":\"local\",\"id\":\"local-model\",\"name\":\"Local\"}]}";
+
+            List<ModelOption> models = ModelCatalogParsers.ParseOmpCatalog(json);
+
+            Assert.AreEqual(1, models.Count);
+            Assert.AreEqual("local-model", models[0].Id);
+        }
+
+        #endregion
+
         #region Antigravity / Open Code
 
         [TestMethod]

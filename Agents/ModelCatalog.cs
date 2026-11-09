@@ -558,6 +558,42 @@ namespace ClaudeCodeVS.Agents
         }
 
         /// <summary>
+        /// <c>omp models --json</c>: OMP (oh-my-pi) publishes a JSON array of models, each with a
+        /// provider-local <c>id</c> and a globally unambiguous <c>selector</c>. The selector is what
+        /// <c>omp --model</c> accepts, so it is the value stored in the menu.
+        /// </summary>
+        public static List<ModelOption> ParseOmpCatalog(string json)
+        {
+            var models = new List<ModelOption>();
+            if (string.IsNullOrWhiteSpace(json)) return models;
+
+            try
+            {
+                JToken root = JToken.Parse(json);
+                var entries = root["models"] as JArray;
+                if (entries == null) return models;
+
+                foreach (JToken entry in entries)
+                {
+                    if (entry == null) continue;
+
+                    string selector = entry["selector"]?.ToString();
+                    string id = entry["id"]?.ToString();
+                    string value = string.IsNullOrWhiteSpace(selector) ? id : selector;
+                    if (string.IsNullOrWhiteSpace(value)) continue;
+
+                    Add(models, value, entry["name"]?.ToString() ?? id);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Model catalog: could not parse the OMP catalog: {ex.Message}");
+            }
+
+            return models;
+        }
+
+        /// <summary>
         /// <c>agy models</c> and <c>opencode models</c>: one bare id per line. Lines carrying spaces
         /// are banners or warnings — no CLI prints a model id with a space in it.
         /// </summary>

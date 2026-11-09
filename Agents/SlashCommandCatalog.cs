@@ -226,6 +226,16 @@ namespace ClaudeCodeVS.Agents
         /// </summary>
         public static bool TryGetQuery(string text, int caret, out string query)
         {
+            return TryGetQuery(text, caret, allowSlashes: false, out query);
+        }
+
+        /// <summary>
+        /// As <see cref="TryGetQuery(string,int,out string)"/>, but can keep slashes inside the typed
+        /// token. OMP names its skill commands <c>skill:agents/archify</c>, so the default path-like
+        /// rejection would hide them after the first slash.
+        /// </summary>
+        public static bool TryGetQuery(string text, int caret, bool allowSlashes, out string query)
+        {
             query = string.Empty;
             if (string.IsNullOrEmpty(text) || text[0] != '/' || caret < 1 || caret > text.Length)
             {
@@ -234,7 +244,7 @@ namespace ClaudeCodeVS.Agents
 
             for (int i = 1; i < caret; i++)
             {
-                if (char.IsWhiteSpace(text[i]) || text[i] == '/')
+                if (char.IsWhiteSpace(text[i]) || (!allowSlashes && text[i] == '/'))
                 {
                     return false;
                 }

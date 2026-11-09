@@ -37,7 +37,9 @@ namespace ClaudeCodeVS
         // A new ordinal, not the retired 6: a settings file still carrying 6 from v10.11 or
         // earlier must keep falling back to Claude Code rather than silently launching Qwen Code.
         QwenCode = 13,
-        Grok = 14
+        Grok = 14,
+        // OMP = oh-my-pi, a PI-compatible agent CLI. A new ordinal, never reused.
+        Omp = 15
     }
 
     /// <summary>

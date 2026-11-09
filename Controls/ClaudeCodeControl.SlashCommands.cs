@@ -7,10 +7,11 @@
  * Usage and reproduction in any manner whatsoever without the written permission of Daniel Carvalho Liedke is strictly forbidden.
  *
  * Purpose: "/" command picker (issue #187) for the terminal-mode prompt box and the native chat composer.
- *          Typing "/" as the first character of a Claude prompt opens the same popup the "@" picker uses
+ *          Typing "/" as the first character of a prompt opens the same popup the "@" picker uses
  *          (see ClaudeCodeControl.AtMention.cs), listing built-in commands, custom commands and skills
  *          with their descriptions — what the CLI's own TUI shows, which the native chat does not have.
- *          Discovery and ranking live in Agents/SlashCommandCatalog.cs.
+ *          Claude commands are discovered from disk; OMP publishes its list over RPC
+ *          (PiRpcSession's available_commands_update). Discovery and ranking live in Agents/SlashCommandCatalog.cs.
  *
  * *******************************************************************************************************************/
 
@@ -38,6 +39,9 @@ namespace ClaudeCodeVS
         // Names the CLI announced at session start (built-ins, plugin commands, ...), across every session.
         private readonly HashSet<string> _slashAnnounced = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+        // OMP publishes its full command list (built-ins, extension commands and skills) over RPC.
+        private List<SlashCommandEntry> _ompSlashCommands = new List<SlashCommandEntry>();
+
         #endregion
 
         #region Popup
@@ -49,11 +53,20 @@ namespace ClaudeCodeVS
         /// </summary>
         private bool TryUpdateSlashPopup(AtMentionTarget target, string text, int caret)
         {
-            if (!SlashCommandCatalog.TryGetQuery(text, caret, out string query)
-                || !IsClaudeProvider(GetActiveOrSelectedProvider()))
+            AiProvider? provider = GetActiveOrSelectedProvider();
+            bool allowSlashes = provider == AiProvider.Omp;
+            if (!SlashCommandCatalog.TryGetQuery(text, caret, allowSlashes, out string query)
+                || (!IsClaudeProvider(provider) && provider != AiProvider.Omp))
             {
                 target.SlashMode = false;
                 return false;
+            }
+
+            // OMP sends the complete list over RPC (including descriptions); no folder discovery.
+            if (provider == AiProvider.Omp)
+            {
+                return ShowSlashItems(target,
+                    SlashCommandCatalog.Rank(_ompSlashCommands, query, SlashMaxResults));
             }
 
             if (_slashDiscovered == null
@@ -65,7 +78,13 @@ namespace ClaudeCodeVS
 
             List<SlashCommandEntry> items = SlashCommandCatalog.Rank(
                 SlashCommandCatalog.Merge(_slashDiscovered, _slashAnnounced), query, SlashMaxResults);
-            if (items.Count == 0)
+            return ShowSlashItems(target, items);
+        }
+
+        /// <summary>Publishes one ranked list in the @-popup and reports that the slash picker handled it.</summary>
+        private bool ShowSlashItems(AtMentionTarget target, List<SlashCommandEntry> items)
+        {
+            if (items == null || items.Count == 0)
             {
                 HideAtPopup(target);
                 return true;
@@ -179,6 +198,33 @@ namespace ClaudeCodeVS
                     _slashAnnounced.Add(name);
                 }
             }
+        }
+
+        /// <summary>Replaces the OMP picker entries with the command list the CLI just announced.</summary>
+        private void RememberOmpSlashCommands(IReadOnlyList<AgentSlashCommand> commands)
+        {
+            if (commands == null)
+            {
+                return;
+            }
+
+            var entries = new List<SlashCommandEntry>(commands.Count);
+            foreach (AgentSlashCommand command in commands)
+            {
+                if (command == null) continue;
+
+                string name = SlashCommandCatalog.NormalizeName(command.Name);
+                if (name.Length == 0) continue;
+
+                entries.Add(new SlashCommandEntry
+                {
+                    Name = name,
+                    Description = command.Description ?? string.Empty,
+                    Source = "OMP"
+                });
+            }
+
+            _ompSlashCommands = entries;
         }
 
         #endregion

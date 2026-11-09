@@ -336,7 +336,7 @@ namespace ClaudeCodeVS
                 bool disableClipboardRequested = _settings != null
                     && _settings.DisableClipboardSend
                     && _wtTabBarHeight == 0;
-                bool isPiProvider = _currentRunningProvider == AiProvider.Pi;
+                bool isPiProvider = IsPiFamilyProvider(_currentRunningProvider);
                 // Reasonix is a TUI like PI — per-character keystrokes flood it, so keep it on the
                 // clipboard/WM_COMMAND paste path even when "Disable clipboard" is on.
                 bool isReasonix = _currentRunningProvider == AiProvider.Reasonix;
